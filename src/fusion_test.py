@@ -6,18 +6,18 @@ from sensor_msgs.msg import Image, PointCloud2
 from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 from message_filters import Subscriber, ApproximateTimeSynchronizer
-from fusion_module import Fusion  # 네가 따로 저장한 Fusion 클래스!
+from fusion_module import Fusion
 
 class FusionNode:
     def __init__(self):
         rospy.init_node('fusion_node')
         self.bridge = CvBridge()
 
-        # 실제 카메라 파라미터로 바꿔줘야 함!
+        # 카메라 파라미터값 (일단 임시값)
         Fx, Fy = 600, 600
         Cx, Cy = 320, 240
-        R = np.eye(3)  # 예시용 단위 행렬
-        T = np.zeros((3, 1))  # 예시용 0벡터
+        R = np.eye(3)
+        T = np.zeros((3, 1))
         img_width = 640
         img_height = 480
 
@@ -55,10 +55,17 @@ class FusionNode:
             rospy.logwarn(f"Fusion error: {e}")
             return
 
+        # # 이미지 위에 Bbox 시각화
+        # bbox = self.fusion.points2bbox(points_2d)
+        # bbox = bbox.reshape((-1,1,2))
+
+        # cv2.polylines(cv_image, [bbox], isClosed=True, color=(255, 0, 0), thickness=2) # 빨간색 박스
+
+
         # 이미지 위에 포인트 시각화
         for u, v in points_2d.astype(int):
             if 0 <= u < self.fusion.img_width and 0 <= v < self.fusion.img_height:
-                cv2.circle(cv_image, (u, v), 2, (0, 255, 0), -1)  # 초록색 점
+                cv2.circle(cv_image, (u, v), 2.5, (0, 255, 0), -1)  # 초록색 점
 
         # 퍼블리시할 메시지로 변환
         fusion_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
