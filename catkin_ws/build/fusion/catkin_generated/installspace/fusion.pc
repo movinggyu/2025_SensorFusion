@@ -1,0 +1,8 @@
+prefix=/home/dlehdrb/foscar/2025_SensorFusion/catkin_ws/install
+
+Name: fusion
+Description: Description of fusion
+Version: 0.0.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
