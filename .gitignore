@@ -1,0 +1,12 @@
+# Catkin artifacts
+build/
+devel/
+.install
+log/
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# 기타
+*.swp
