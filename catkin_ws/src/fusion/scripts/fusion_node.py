@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'module'))
 import rospy
 import numpy as np
 import cv2
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, PointCloud2, PointCloud
 from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 from message_filters import Subscriber, ApproximateTimeSynchronizer
@@ -43,9 +43,10 @@ class FusionNode:
         # 토픽 구독자 설정 (image + lidar)
         self.image_sub = Subscriber('/usb_cam/image_raw', Image)
         self.lidar_sub = Subscriber('/velodyne_points', PointCloud2)
+
         # 일단 주석화
-        # self.yolo_bbox_sub = rospy.Subscriber('/yolo/bbox', BboxArrayMsg, self.yolo_callback) # yolo bbox 점 4개 좌표 (이미지 상) (4,2)
-        # self.lidar_bbox_sub = rospy.Subscriber('/lidar/bbox_3d', Bbox3DArrayMsg, self.lidar_callback) # cluster box 점 8개 좌표 (라이다 상) (8,3)
+        self.yolo_bbox_sub = rospy.Subscriber('/yolo/bbox', PointCloud, self.yolo_callback) # yolo bbox 점 4개 좌표 (이미지 상) (4,2)
+        self.lidar_bbox_sub = rospy.Subscriber('/lidar/bbox_3d', PointCloud2, self.lidar_callback) # cluster box 점 8개 좌표 (라이다 상) (8,3)
 
 
         # 근사 시간 동기화
@@ -61,9 +62,17 @@ class FusionNode:
             return
         
         if self.yolo_bbox is not None:
-            cv2.polylines(cv_image, [self.yolo_bbox], isClosed=True, color=(255, 0, 0), thickness=2) # 빨간색 박스
+            # (4,1,2) → (4,2) 형태로 바꿔서 순회
+            pts = self.yolo_bbox.reshape(-1, 2)
+            for (u, v) in pts:
+                cv2.circle(cv_image, (int(u), int(v)), 4, (0, 0, 255), -1)  # 빨강 점
+            cv2.polylines(cv_image, [self.yolo_bbox], isClosed=True, color=(0, 0, 255), thickness=2) # 빨간색 박스
+            
         if self.lidar_bbox is not None:
-            cv2.polylines(cv_image, [self.lidar_bbox], isClosed=True, color=(255, 255, 0), thickness=2) # 노란색 박스
+            pts = self.lidar_bbox.reshape(-1, 2)
+            for (u, v) in pts:
+                cv2.circle(cv_image, (int(u), int(v)), 4, (0, 255, 255), -1)  # 노랑 점
+            cv2.polylines(cv_image, [self.lidar_bbox], isClosed=True, color=(0, 255, 255), thickness=2) # 노란색 박스
 
         # 라이다 포인트 읽기
         points = []
@@ -96,12 +105,20 @@ class FusionNode:
             rospy.logwarn(f"YOLO bbox parsing failed: {e}")
             return
         bbox = self.fusion.points2bbox(points_np)
-        self.yolo_bbox = bbox.reshape((-1,1,2)) # cv2 기능 쓰기위해서 (N, 1, 2)형태로 변환
+        self.yolo_bbox = bbox.reshape((-1,1,2)).astype(np.int32) # cv2 기능 쓰기위해서 (N, 1, 2)형태로 변환
 
     def lidar_callback(self, msg):
         try:
-            # 일반적인 경우: msg.points는 geometry_msgs/Point[] 타입
-            points_np = np.array([[p.x, p.y, p.z] for p in msg.points])
+            # PointCloud2 → 리스트 of (x,y,z)
+            points = list(pc2.read_points(
+                msg,
+                field_names=("x", "y", "z"),
+                skip_nans=True
+            ))
+            points_np = np.array(points)  # shape (N,3)
+
+            # (옵션) BBox 전용 8점만 보내는 메시지를 쓰셨다면
+            # points_np = points_np[:8]  # 예시로 처음 8개만 가져오기
         except Exception as e:
             rospy.logwarn(f"Cluster box msg not convertible to ndarray: {e}")
             return
@@ -116,7 +133,7 @@ class FusionNode:
         # 이미지 위에 Bbox 시각화
         try:
             bbox = self.fusion.points2bbox(points_2d)
-            self.lidar_bbox = bbox.reshape((-1, 1, 2))  # OpenCV용 형태
+            self.lidar_bbox = bbox.reshape((-1, 1, 2)).astype(np.int32)  # OpenCV용 형태
         except Exception as e:
             rospy.logwarn(f"Failed to compute lidar bbox: {e}")
 
