@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'module'))
 
 import rospy
 import numpy as np
@@ -42,7 +42,7 @@ class FusionNode:
 
         # 토픽 구독자 설정 (image + lidar)
         self.image_sub = Subscriber('/usb_cam/image_raw', Image)
-        self.lidar_sub = Subscriber('/lidar/points', PointCloud2)
+        self.lidar_sub = Subscriber('/velodyne_points', PointCloud2)
         # 일단 주석화
         # self.yolo_bbox_sub = rospy.Subscriber('/yolo/bbox', BboxArrayMsg, self.yolo_callback) # yolo bbox 점 4개 좌표 (이미지 상) (4,2)
         # self.lidar_bbox_sub = rospy.Subscriber('/lidar/bbox_3d', Bbox3DArrayMsg, self.lidar_callback) # cluster box 점 8개 좌표 (라이다 상) (8,3)

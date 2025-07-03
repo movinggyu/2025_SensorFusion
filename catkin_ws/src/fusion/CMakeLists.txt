@@ -13,5 +13,6 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
   scripts/fusion_node.py
+  scripts/fusion_test_pub.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
