@@ -12,6 +12,6 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  scripts/fusion_test.py
+  scripts/fusion_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
